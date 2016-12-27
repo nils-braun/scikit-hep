@@ -36,13 +36,151 @@ from math import pi
 
 from .prefixes import *
 
+class Unit(object):
+    # define the algebra of units in mul and div
+
+    @staticmethod
+    def mul(one, two):
+        if isinstance(one, Millimeter) and isinstance(two, Millimeter):
+            return Millimeter2(one.multiplier * two.multiplier)
+
+        elif isinstance(one, Millimeter) and isinstance(two, Millimeter2):
+            return Millimeter3(one.multiplier * two.multiplier)
+
+        elif isinstance(one, Millimeter2) and isinstance(two, Millimeter):
+            return Millimeter3(one.multiplier * two.multiplier)
+
+        else:
+            return one.__class__(one.multiplier * float(two))
+        
+    @staticmethod
+    def div(one, two):
+        if issubclass(one.__class__, two.__class__) or issubclass(two.__class__, one.__class__):
+            return one.multiplier / two.multiplier
+
+        elif isinstance(one, Millimeter2) and isinstance(two, Millimeter):
+            return Millimeter(one.multiplier / two.multiplier)
+
+        elif isinstance(one, Millimeter3) and isinstance(two, Millimeter):
+            return Millimeter2(one.multiplier / two.multiplier)
+
+        elif isinstance(one, Millimeter3) and isinstance(two, Millimeter2):
+            return Millimeter(one.multiplier / two.multiplier)
+
+        else:
+            return one.__class__(one.multiplier / float(two))
+
+    def __init__(self, multiplier):
+        self.multiplier = float(multiplier)
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.multiplier == other.multiplier
+    def __ne__(self, other):
+        return not self == other
+    def __hash__(self):
+        return hash((self.__class__, self.multiplier))
+
+    def __repr__(self):
+        return "{1}({0})".format(self.multiplier, self.__class__.__name__)
+    def __str__(self):
+        return "{0}*{1}".format(self.multiplier, self.name)
+
+    def __abs__(self):
+        return self.__class__(abs(self.multiplier))
+    def __pos__(self):
+        return self
+    def __neg__(self):
+        return self.__class__(-self.multiplier)
+    def __round__(self, places=0):
+        return self.__class__(round(self.multiplier, places))
+
+    def __add__(self, other):
+        if isinstance(other, Unit) and issubclass(other.__class__, self.__class__):
+            return other.__class__(self.multiplier + other.multiplier)
+        elif isinstance(other, Unit) and issubclass(self.__class__, other.__class__):
+            return self.__class__(self.multiplier + other.multiplier)
+        else:
+            raise TypeError("cannot add {0} and {1}".format(self, other))
+    def __radd__(other, self):
+        if isinstance(other, Unit) and issubclass(other.__class__, self.__class__):
+            return other.__class__(self.multiplier + other.multiplier)
+        elif isinstance(other, Unit) and issubclass(self.__class__, other.__class__):
+            return self.__class__(self.multiplier + other.multiplier)
+        else:
+            raise TypeError("cannot add {1} and {0}".format(self, other))
+    def __sub__(self, other):
+        if isinstance(other, Unit) and issubclass(other.__class__, self.__class__):
+            return other.__class__(self.multiplier - other.multiplier)
+        elif isinstance(other, Unit) and issubclass(self.__class__, other.__class__):
+            return self.__class__(self.multiplier - other.multiplier)
+        else:
+            raise TypeError("cannot subtract {0} and {1}".format(self, other))
+    def __rsub__(other, self):
+        if isinstance(other, Unit) and issubclass(other.__class__, self.__class__):
+            return other.__class__(self.multiplier - other.multiplier)
+        elif isinstance(other, Unit) and issubclass(self.__class__, other.__class__):
+            return self.__class__(self.multiplier - other.multiplier)
+        else:
+            raise TypeError("cannot subtract {1} and {0}".format(self, other))
+    def __mul__(self, other):
+        return Unit.mul(self, other)
+    def __rmul__(other, self):
+        return Unit.mul(other, self)
+    def __pow__(self, other):
+        if other == 2:
+            return Unit.mul(self, self)
+        elif other == 3:
+            return Unit.mul(Unit.mul(self, self), self)
+        elif other == 4:
+            return Unit.mul(Unit.mul(Unit.mul(self, self), self), self)
+        elif round(other, 7) == 1.0/2.0:
+            return Unit.div(self, self)
+        elif round(other, 7) == 1.0/3.0:
+            return Unit.div(Unit.div(self, self), self)
+        elif round(other, 7) == 1.0/4.0:
+            return Unit.div(Unit.div(Unit.div(self, self), self), self)
+        else:
+            raise TypeError("cannot raise {1} to the {0} power".format(self, other))
+    def __rpow__(other, self):
+        raise TypeError("cannot raise {1} to the {0} power".format(self, other))
+    def __div__(self, other):
+        return Unit.div(self, other)
+    def __rdiv__(other, self):
+        return Unit.div(self, other)
+    def __truediv__(self, other):
+        return Unit.div(self, other)
+    def __rtruediv__(other, self):
+        return Unit.div(self, other)
+    def __floordiv__(self, other):
+        raise TypeError("cannot floor-divide {0} by {1}".format(self, other))
+    def __rfloordiv__(other, self):
+        raise TypeError("cannot floor-divide {1} by {0}".format(self, other))
+
+    def __mod__(self, other):
+        raise TypeError("cannot take {0} modulo {1}".format(self, other))
+    def __rmod__(other, self):
+        raise TypeError("cannot take {0} modulo {1}".format(self, other)) 
+    def __divmod__(self, other):
+        raise TypeError("cannot divmod {0} by {1}".format(self, other))
+    def __rdivmod__(other, self):
+        raise TypeError("cannot divmod {0} by {1}".format(self, other))
+
 # --------------------------------------------------------------------
 # Units of length
 # ---------------
 
-millimeter  = 1.
-millimeter2 = millimeter * millimeter
-millimeter3 = millimeter * millimeter * millimeter
+class Millimeter(Unit):
+    name = "mm"
+
+class Millimeter2(Unit):
+    name = "mm2"
+
+class Millimeter3(Unit):
+    name = "mm3"
+
+millimeter  = Millimeter(1.0)
+millimeter2 = Millimeter2(1.0)
+millimeter3 = Millimeter3(1.0)
 
 mm  = millimeter
 mm2 = millimeter2
